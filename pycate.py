@@ -6,14 +6,17 @@ Tecnológico Agrario de Castilla y León (Valladolid, Castile and Leon).
 
 """
 
-__author__ = "Javier Martín"
-__url__ = "https://github.com/javiermdb99"
+AUTHOR = "Javier Martín"
+URL = "https://github.com/javiermdb99"
 
-columns = "FILE SEQUENCE START END STRAND GENE COVERAGE COVERAGE_MAP GAPS %COVERAGE %IDENTITY DATABASE ACCESSION PRODUCT RESISTANCE".split()
+COLUMNS = "FILE SEQUENCE START END STRAND GENE COVERAGE COVERAGE_MAP GAPS %COVERAGE %IDENTITY DATABASE ACCESSION PRODUCT RESISTANCE".split()
+BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "ssequid", "sstart", "send",
+                "slen", "sstrand", "evalue", "length", "pident", "gaps", "gapopen", 
+                "stitle"]
 parser = argparse.ArgumentParser(description="A program")
 
-def parseArguments():
 
+def parseArguments():
     """
     Provides different options to change the program's behaviour
     """
@@ -43,11 +46,14 @@ def parseArguments():
 # TODO:
 #   Realizar la función de lectura del fasta
 #   Poder añadirla como un argumento necesario en el parseArguments.
+
+
 def readFile(file):
     f = open(file, 'r')
     i = 0
     for _ in f:
-        i+=1
+        i += 1
     print(i)
+
 
 parseArguments()
