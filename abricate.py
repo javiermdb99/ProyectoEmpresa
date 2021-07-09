@@ -4,7 +4,6 @@ import argparse
 Script made by Javier Martín de Benito while businesss practicing at Instituto de
 Tecnológico Agrario de Castilla y León (Valladolid, Castile and Leon).
 
-This Python script is based on the Abricate Perl program, made by Torsten Seemann.
 """
 
 __author__ = "Javier Martín"
@@ -13,6 +12,10 @@ __url__ = "https://github.com/javiermdb99"
 columns = "FILE SEQUENCE START END STRAND GENE COVERAGE COVERAGE_MAP GAPS %COVERAGE %IDENTITY DATABASE ACCESSION PRODUCT RESISTANCE".split()
 
 def parseArguments():
+
+    """
+    Provides different options to change the program's behaviour
+    """
     parser = argparse.ArgumentParser(description="A program")
 
     parser.add_argument('-d', '--debug', action='store_true', help="Verbose debug output.")
@@ -33,3 +36,15 @@ def parseArguments():
     # TODO filtering
 
     # TODO CHEQUEOS
+
+# TODO:
+#   Realizar la función de lectura del fasta
+#   Poder añadirla como un argumento necesario en el parseArguments.
+def readFile(file):
+    f = open(file, 'r')
+    i = 0
+    for _ in f:
+        i+=1
+    print(i)
+
+parseArguments()
