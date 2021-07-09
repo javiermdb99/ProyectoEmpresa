@@ -9,10 +9,14 @@ Tecnológico Agrario de Castilla y León (Valladolid, Castile and Leon).
 AUTHOR = "Javier Martín"
 URL = "https://github.com/javiermdb99"
 
-COLUMNS = "FILE SEQUENCE START END STRAND GENE COVERAGE COVERAGE_MAP GAPS %COVERAGE %IDENTITY DATABASE ACCESSION PRODUCT RESISTANCE".split()
+COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
+           "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION", 
+           "PRODUCT", "RESISTANCE"]
 BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "ssequid", "sstart", "send",
-                "slen", "sstrand", "evalue", "length", "pident", "gaps", "gapopen", 
+                "slen", "sstrand", "evalue", "length", "pident", "gaps", "gapopen",
                 "stitle"]
+REQUIRE = ["blastn", "blastx", "makeblastdb", "blastdbcmd", "any2fasta", "gzip", "unzip"]
+
 parser = argparse.ArgumentParser(description="A program")
 
 
@@ -27,7 +31,7 @@ def parseArguments():
     # parser.add_argument('--check', action='store_true', help="Check dependencies are installed.")
     parser.add_argument('-t', '--threads', action='store', help="Use this many BLAST+ threads.",
                         default=1, type=int)
-    # parser.add_argument('--fofn', action='store_true', help="Run files listed on this file.") # TODO leer fichero
+    parser.add_argument('--fofn', action='store', help="Run files listed on this file.")
     parser.add_argument('-l', '--list', action='store_true', help="List included databases.")
     # parser.add_argument('--datadir', action='store_true', help="Verbose debug output") # TODO
     # parser.add_argument('--db', action='store_true', help="Verbose debug output")
@@ -38,7 +42,7 @@ def parseArguments():
     d = vars(parser.parse_args())
     # TODO filtering
 
-    print(d['threads'])
+    print(d['fofn'])
     if d['threads'] < 1:
         raise NameError('Threads must be greater or equal to 1.')
     # TODO CHEQUEOS
