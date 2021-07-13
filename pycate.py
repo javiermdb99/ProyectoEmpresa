@@ -55,11 +55,13 @@ def parseArguments():
 
 
 def readFile(file):
-    f = open(file, 'r')
-    i = 0
-    for _ in f:
-        i += 1
-    print(i)
+    try:
+        f = open(file, 'r')
+    except IOError:
+        print(file, " does not exist, or is unreadable.")
+    
+    print("Processing ", file)
+    
 
 
 parseArguments()
