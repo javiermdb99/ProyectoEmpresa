@@ -299,12 +299,12 @@ sub blast_database_info {
   my($prefix) = @_;
   my(@res) = qx(blastdbcmd -info -db \Q$prefix\E 2> /dev/null);
   chomp @res;
-  my $res = join(' ', @res);
+  my $res = join(' ', @res); #unir todo, separado por el espacio en blanco
   my $info = { PREFIX => $prefix };
 
-  $res =~ m/\b([\d,]+)\s+sequences;/ or return;
+  $res =~ m/\b([\d,]+)\s+sequences;/ or return; #m es match
   $info->{SEQUENCES} = $1;
-  $info->{SEQUENCES} =~ s/,//g;
+  $info->{SEQUENCES} =~ s/,//g; # s es substitute
 
   $res =~ m/\btotal\s+(\S+)/ or return;
   $info->{DBTYPE} = $1 eq 'residues' ? 'prot' : 'nucl';
