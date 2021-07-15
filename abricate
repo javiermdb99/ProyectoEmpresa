@@ -297,7 +297,7 @@ sub summary_table {
 
 sub blast_database_info {
   my($prefix) = @_;
-  my(@res) = qx(blastdbcmd -info -db \Q$prefix\E 2> /dev/null);
+  my(@res) = qx(blastdbcmd -info -db \Q$prefix\E 2> /dev/null); # blastdbcmd -info -db /home/javier/anaconda3/db/resfinder/sequences
   chomp @res;
   my $res = join(' ', @res); #unir todo, separado por el espacio en blanco
   my $info = { PREFIX => $prefix };
