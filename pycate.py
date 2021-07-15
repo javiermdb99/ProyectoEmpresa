@@ -1,6 +1,7 @@
 import argparse
 import os
 import subprocess
+import re
 
 """
 Script made by Javier Martín de Benito while businesss practicing at Instituto de
@@ -27,6 +28,7 @@ def parseArguments():
     Provides different options to change the program's behaviour
     """
 
+    parser.add_argument('file', action='store', help=".fasta File.")
     parser.add_argument('-d', '--debug', action='store_true', help="Verbose debug output.")
     parser.add_argument('-q', '--quiet', action='store_true', help="No error output.")
     parser.add_argument('-v', '--version', action='store_true', help="Print version.")
@@ -41,17 +43,8 @@ def parseArguments():
     parser.add_argument('--csv', action='store_true', help="Output csv instead of tsv.")
     # parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
 
-    d = vars(parser.parse_args())
-    # TODO filtering
+    return vars(parser.parse_args())
 
-    print(d['fofn'])
-    if d['threads'] < 1:
-        raise NameError('Threads must be greater or equal to 1.')
-    # TODO CHEQUEOS
-
-# TODO:
-#   Realizar la función de lectura del fasta
-#   Poder añadirla como un argumento necesario en el parseArguments.
 
 
 def readFile(file):
@@ -59,9 +52,25 @@ def readFile(file):
         f = open(file, 'r')
     except IOError:
         print(file, " does not exist, or is unreadable.")
+    # x=0
+    # for _ in f:
+    #     x = x+1
     
     print("Processing ", file)
-    
+    # print(x)
 
+def blastDatabaseInfo():
+    out = subprocess.Popen(['blastdbcmd', '-info', '-db', 
+    '/home/javier/anaconda3/db/resfinder/sequences'], stdout=subprocess.PIPE)
+    stdout, stderr = out.communicate()
+    print(stdout)
 
-parseArguments()
+args = parseArguments()
+# print(args['fofn'])
+# if args['threads'] < 1:
+#     raise NameError('Threads must be greater or equal to 1.')
+# # TODO CHEQUEOS
+file = args['file']
+readFile(file)
+blastDatabaseInfo()
+#os.system("echo Hola")
