@@ -1,0 +1,9 @@
+
+
+Building a new DB, current time: 07/16/2018 13:39:38
+New DB name:   /opt/conda/conda-bld/abricate_1531747966502/work/bin/../db/argannot/sequences
+New DB title:  argannot
+Sequence type: Nucleotide
+Keep MBits: T
+Maximum file size: 1000000000B
+Adding sequences from FASTA; added 1749 sequences in 0.0881832 seconds.
