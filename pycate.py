@@ -1,8 +1,8 @@
 import argparse
-import os
+import sys
 import subprocess
 import re
-
+from prettytable import PrettyTable
 """
 Script made by Javier Martín de Benito while businesss practicing at Instituto de
 Tecnológico Agrario de Castilla y León (Valladolid, Castile and Leon).
@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser(description="A program")
 
 def parse_arguments():
     """
-    Provides different options to change the program's behaviour
+    Provides different options to change the program's behaviour.
     """
 
     parser.add_argument('file', action='store', help=".fasta File.")
@@ -46,7 +46,7 @@ def parse_arguments():
                         help="List included databases.")
     # parser.add_argument('--datadir', action='store_true', help="Verbose debug output") # TODO
     parser.add_argument('--db', action='store',
-                        help="Verbose debug output", default="resfinder")
+                        help="Database to be used.", default="resfinder")
     parser.add_argument('--noheader', action='store_true',
                         help="Suppress column headers.")
     parser.add_argument('--csv', action='store_true',
@@ -83,19 +83,25 @@ def blast_database_info(db):
         -total_bases: number of bases found in database.
         -date: date in which database was updated.
     """
+
+    # Execute info command in BLAST and parse output
     out = subprocess.run(['blastdbcmd', '-info', '-db',
                           '/home/javier/anaconda3/db/' + db + '/sequences'], 
-                          stdout=subprocess.PIPE)
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     info = ' '.join(re.split("[ \n\t]", out.stdout.decode('utf-8')))
 
-    seq = re.findall("[\d,]* sequences", info)[0]
-    seq = int(seq.replace(",","").replace(" sequences", ""))
+    try:
+        seq = re.findall("[\d,]* sequences", info)[0]
+        seq = int(seq.replace(",","").replace(" sequences", ''))
 
-    total_bases = re.findall("[\d,]* total bases", info)[0]
-    total_bases= int(total_bases.replace(",", "").replace(" total bases", ""))
+        total_bases = re.findall("[\d,]* total bases", info)[0]
+        total_bases= int(total_bases.replace(",",'').replace(" total bases", ""))
 
-    date = re.findall("Date: \w*\s+\d+,\s+\d+", info)[0]
-    date = date.replace("Date: ", "")
+        date = re.findall("Date: \w*\s+\d+,\s+\d+", info)[0]
+        date = date.replace("Date: ", '')
+    except IndexError:
+        print(db, "database does not exist.")
+        sys.exit(1)
 
     return seq, total_bases, date
 
@@ -105,6 +111,11 @@ file = args['file']
 db = args['db']
 
 read_file(file)
-x = blast_database_info(db)
+sequences, total_bases, date_db= blast_database_info(db)
+print(f"\nDatabase \"{db}\" information:")
+print(f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
 
+t = PrettyTable(COLUMNS)
+
+print(t)
 
