@@ -2,6 +2,7 @@ import argparse
 import sys
 import subprocess
 import re
+import os
 from prettytable import PrettyTable
 """
 Script made by Javier Martín de Benito while businesss practicing at Instituto de
@@ -40,14 +41,15 @@ def parse_arguments():
     parser.add_argument('-v', '--version',
                         action='store_true', help="Print version.")
     # parser.add_argument('--check', action='store_true', help="Check dependencies are installed.")
-    parser.add_argument('-t', '--threads', action='store',
+    parser.add_argument('--threads', action='store',
                         help="Use this many BLAST+ threads.",
                         default=1, type=int)
     parser.add_argument('--fofn', action='store',
                         help="Run files listed on this file.")
     parser.add_argument('-l', '--list', action='store_true',
                         help="List included databases.")
-    # parser.add_argument('--datadir', action='store_true', help="Verbose debug output") # TODO
+    parser.add_argument('--datadir', action="store", default=os.getcwd() + "/db",
+                        help="Directory where data is stored.")
     parser.add_argument('--db', action='store',
                         help="Database to be used.", default="resfinder")
     parser.add_argument('--noheader', action='store_true',
@@ -63,16 +65,18 @@ def parse_arguments():
 
 
 def check_arguments(args):
-    print(type(args['minid']))
     minid = args['minid']
     mincov = args['mincov']
+    threads = args['threads']
     if not (minid <= 100 and minid > 0):
         raise ValueError('minid must be between 0 and 100 (100 included).')
     if not (mincov <= 100 and mincov >= 0):
         raise ValueError('mincov must be between 0 and 100 (both included).')
+    if not (threads >= 1):
+        raise ValueError('threads number must be greater than 0.')
 
 
-def blast_database_info(db):
+def blast_database_info(db, db_name) -> tuple:
     """
     This function parses the info output of the database that is going to be
     used.
@@ -89,35 +93,30 @@ def blast_database_info(db):
 
     # Execute info command in BLAST and parse output
     out = subprocess.run(['blastdbcmd', '-info', '-db',
-                          '/home/javier/anaconda3/db/' + db + '/sequences'], 
+                          db], 
                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     info = ' '.join(re.split("[ \n\t]", out.stdout.decode('utf-8')))
 
     try:
-        seq = re.findall("[\d,]* sequences", info)[0]
-        seq = int(seq.replace(",", "").replace(" sequences", ''))
+        seq = re.search("([\d,]*) sequences", info).group(1)
 
-        total_bases = re.findall("[\d,]* total bases", info)[0]
-        total_bases = int(total_bases.replace(
-            ",", '').replace(" total bases", ""))
+        total_bases = re.search("([\d,]*) total bases", info).group(1)
 
-        date = re.findall("Date: \w*\s+\d+,\s+\d+", info)[0]
-        date = date.replace("Date: ", '')
+        date = re.search("Date: (\w*\s+\d+,\s+\d+)", info).group(1)
 
-        type = re.findall("total\s+\S+", info)[0]
-        type = type.replace("total ", "")
+        type = re.search("total\s+(\S+)", info).group(1)
         type = "prot" if type == "residues" else "nucl"
 
-        # TODO
-    except IndexError:
-        print(db, "database does not exist.")
+    except:
+        print(db_name, "database does not exist.")
         sys.exit(1)
 
     return seq, total_bases, date, type
 
 
-def process_file(file, type):
+def process_file(file, type, db, threads):
     process_debug("Reading file.")
+    format = "6 " + " ".join(BLAST_FIELDS)
 
     try:
         f = open(file, 'r')
@@ -132,10 +131,10 @@ def process_file(file, type):
     else:
         blast_query = "blastx -task blastx-fast -seg no"
 
-    query = ("(any2fasta -q -u " + file + " | " +
-             blast_query + "-db \Q$db_path\E -outfmt '$format' -num_threads $threads" +
-             " -evalue 1E-20 -culling_limit $CULL" +
-             " -max_target_seqs 10000")
+    query = (f"(any2fasta -q -u {file} | " +
+             f" {blast_query} -db {db} -outfmt {format} -num_threads {threads}" +
+             f" -evalue 1E-20 -culling_limit 1" + # $CULL de abricate es el 1 aquí
+             f" -max_target_seqs 10000")
 
     # TODO
     #   my $blastcmd = $dbinfo->{DBTYPE} eq 'nucl'
@@ -154,14 +153,22 @@ db = args['db']
 debug = args['debug']
 minid = args['minid']
 mincov = args['mincov']
+wd = os.path.abspath(args['datadir'])
+threads = args['threads']
+
+db_name = db
+db = f"{wd}/{db}/sequences"
+
+process_debug("Using " + wd + " working directory.")
+process_debug("Using " + db + " database.")
 
 
-sequences, total_bases, date_db, type = blast_database_info(db)
-print(f"\nDatabase \"{db}\" information:")
+sequences, total_bases, date_db, type = blast_database_info(db, db_name)
+print(f"\nDatabase \"{db_name}\" information:")
 print(
     f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
-process_file(file, type)
 
 t = PrettyTable(COLUMNS)
+process_file(file, type, db, threads)
 
 print(t)
