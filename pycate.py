@@ -137,6 +137,9 @@ def process_file(file, type, db, threads):
              f" {blast_query} -db {db} -outfmt \'{format}\' -num_threads {threads}" +
              f" -evalue 1E-20 -culling_limit 1" + # $CULL de abricate es el 1 aquí
              f" -max_target_seqs 10000)")
+    out = subprocess.run(query, 
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        shell=True)
 
     # TODO
     #   my $blastcmd = $dbinfo->{DBTYPE} eq 'nucl'
