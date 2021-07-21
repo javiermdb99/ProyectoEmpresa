@@ -34,33 +34,35 @@ def parse_arguments():
     """
 
     parser.add_argument('file', action='store', help=".fasta File.")
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help="Verbose debug output.")
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help="No error output.")
-    parser.add_argument('-v', '--version',
-                        action='store_true', help="Print version.")
+    # parser.add_argument('-d', '--debug', action='store_true',
+    #                     help="Verbose debug output.")
+    # parser.add_argument('-q', '--quiet', action='store_true',
+    #                     help="No error output.")
+    # parser.add_argument('-v', '--version',
+    #                     action='store_true', help="Print version.")
     # parser.add_argument('--check', action='store_true', help="Check dependencies are installed.")
     parser.add_argument('--threads', action='store',
                         help="Use this many BLAST+ threads.",
                         default=1, type=int)
-    parser.add_argument('--fofn', action='store',
-                        help="Run files listed on this file.")
-    parser.add_argument('-l', '--list', action='store_true',
-                        help="List included databases.")
+    # parser.add_argument('--setupdb', action='store',
+    #                     help="Formal all the BLAST databases.")
+    # parser.add_argument('-l', '--list', action='store_true',
+    #                     help="List included databases.")
     parser.add_argument('--datadir', action="store", default=os.getcwd() + "/db",
                         help="Directory where data is stored.")
     parser.add_argument('--db', action='store',
                         help="Database to be used.", default="resfinder")
-    parser.add_argument('--noheader', action='store_true',
-                        help="Suppress column headers.")
-    parser.add_argument('--csv', action='store_true',
-                        help="Output csv instead of tsv.")
+    # parser.add_argument('--noheader', action='store_true',
+    #                     help="Suppress column headers.")
+    # parser.add_argument('--csv', action='store_true',
+    #                     help="Output csv instead of tsv.")
     # parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
     parser.add_argument('--minid', action='store', type=int, default=80,
                         help="Minimum DNA identity.")
     parser.add_argument('--mincov', action='store', type=int, default=80,
                         help="Minimum DNA coverage.")
+    # parser.add_argument('--mincov', action='store', type=int, default=80,
+    #                     help="Minimum DNA coverage.")
     return vars(parser.parse_args())
 
 
