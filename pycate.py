@@ -34,8 +34,8 @@ def parse_arguments():
     """
 
     parser.add_argument('file', action='store', help=".fasta File.")
-    # parser.add_argument('-d', '--debug', action='store_true',
-    #                     help="Verbose debug output.")
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help="Verbose debug output.")
     # parser.add_argument('-q', '--quiet', action='store_true',
     #                     help="No error output.")
     # parser.add_argument('-v', '--version',
@@ -61,8 +61,8 @@ def parse_arguments():
                         help="Minimum DNA identity.")
     parser.add_argument('--mincov', action='store', type=int, default=80,
                         help="Minimum DNA coverage.")
-    # parser.add_argument('--mincov', action='store', type=int, default=80,
-    #                     help="Minimum DNA coverage.")
+    # parser.add_argument('--summary', action='store_true',
+    #                     help="Summarize reports.")
     return vars(parser.parse_args())
 
 
@@ -134,9 +134,9 @@ def process_file(file, type, db, threads):
         blast_query = "blastx -task blastx-fast -seg no"
 
     query = (f"(any2fasta -q -u {file} | " +
-             f" {blast_query} -db {db} -outfmt {format} -num_threads {threads}" +
+             f" {blast_query} -db {db} -outfmt \'{format}\' -num_threads {threads}" +
              f" -evalue 1E-20 -culling_limit 1" + # $CULL de abricate es el 1 aquí
-             f" -max_target_seqs 10000")
+             f" -max_target_seqs 10000)")
 
     # TODO
     #   my $blastcmd = $dbinfo->{DBTYPE} eq 'nucl'
