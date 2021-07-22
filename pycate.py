@@ -16,7 +16,7 @@ URL = "https://github.com/javiermdb99"
 COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
            "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
            "PRODUCT", "RESISTANCE"]
-BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "ssequid", "sstart", "send",
+BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "sseqid", "sstart", "send",
                 "slen", "sstrand", "evalue", "length", "pident", "gaps", "gapopen",
                 "stitle"]
 REQUIRE = ["blastn", "blastx", "makeblastdb",
@@ -95,8 +95,8 @@ def blast_database_info(db, db_name) -> tuple:
 
     # Execute info command in BLAST and parse output
     out = subprocess.run(['blastdbcmd', '-info', '-db',
-                          db], 
-                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                          db],
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     info = ' '.join(re.split("[ \n\t]", out.stdout.decode('utf-8')))
 
     try:
@@ -116,14 +116,14 @@ def blast_database_info(db, db_name) -> tuple:
     return seq, total_bases, date, type
 
 
-def process_file(file, type, db, threads):
+def process_file(file, t: PrettyTable, type, db, threads, minid):
     process_debug("Reading file.")
     format = "6 " + " ".join(BLAST_FIELDS)
 
-    try:
-        f = open(file, 'r')
-    except IOError:
-        print(file, " does not exist, or is unreadable.")
+    # try:
+    #     f = open(file, 'r')
+    # except IOError:
+    #     print(file, " does not exist, or is unreadable.")
 
     print("Processing ", file)
     process_debug("Processing file. BLAST+ query")
@@ -135,11 +135,38 @@ def process_file(file, type, db, threads):
 
     query = (f"(any2fasta -q -u {file} | " +
              f" {blast_query} -db {db} -outfmt \'{format}\' -num_threads {threads}" +
-             f" -evalue 1E-20 -culling_limit 1" + # $CULL de abricate es el 1 aquí
+             f" -evalue 1E-20 -culling_limit 1" +  # $CULL de abricate es el 1 aquí
              f" -max_target_seqs 10000)")
-    out = subprocess.run(query, 
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                        shell=True)
+    cmd = subprocess.run(query,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         shell=True)
+    output = cmd.stdout.decode('utf-8')
+    output = output.split("\n")
+    output.pop()
+
+    print("Found ", len(output), " genes in ", file)
+    try:
+        for i in output:
+            line = i.split()
+            output_dict = dict(zip(BLAST_FIELDS, line))
+            if output_dict['sstrand'] == 'minus':
+                (output_dict['sstart'], output_dict['send']) = (
+                    output_dict['send'], output_dict['sstart'])
+            gene = re.search("~{3}(\S+)~{3}", output_dict['sseqid']).group(1)
+            row_output = [file,
+                            output_dict['qseqid'],
+                            output_dict['qstart'],
+                            output_dict['qend'],
+                            # '-' if output_dict['sstrand'] == 'minus' else '+',
+                            # output_dict['sstrand'],
+                            gene,
+                            f"{output_dict['sstart']}-{output_dict['send']}"+
+                            f"/{output_dict['slen']}"
+                            ]
+            t.add_row(row_output)
+    except:
+        print("Sequence not found in ", file)
+        sys.exit(1)
 
     # TODO
     #   my $blastcmd = $dbinfo->{DBTYPE} eq 'nucl'
@@ -174,6 +201,7 @@ print(
     f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
 
 t = PrettyTable(COLUMNS)
-process_file(file, type, db, threads)
+t = PrettyTable(['FILE', 'SEQUENCE', 'START', 'END', 'GENE', 'COVERAGE'])
+process_file(file, t, type, db, threads, minid)
 
 print(t)
