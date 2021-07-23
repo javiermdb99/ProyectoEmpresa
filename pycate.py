@@ -59,7 +59,7 @@ def parse_arguments():
     # parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
     parser.add_argument('--minid', action='store', type=int, default=80,
                         help="Minimum DNA identity.")
-    parser.add_argument('--mincov', action='store', type=int, default=80,
+    parser.add_argument('--mincov', action='store', type=int, default=0,
                         help="Minimum DNA coverage.")
     # parser.add_argument('--summary', action='store_true',
     #                     help="Summarize reports.")
@@ -116,7 +116,7 @@ def blast_database_info(db, db_name) -> tuple:
     return seq, total_bases, date, type
 
 
-def process_file(file, t: PrettyTable, type, db, threads, minid):
+def process_file(file, t: PrettyTable, type, db, threads, minid, mincov):
     process_debug("Reading file.")
     format = "6 " + " ".join(BLAST_FIELDS)
 
@@ -145,28 +145,37 @@ def process_file(file, t: PrettyTable, type, db, threads, minid):
     output.pop()
 
     print("Found ", len(output), " genes in ", file)
-    try:
-        for i in output:
-            line = i.split()
-            output_dict = dict(zip(BLAST_FIELDS, line))
-            if output_dict['sstrand'] == 'minus':
-                (output_dict['sstart'], output_dict['send']) = (
-                    output_dict['send'], output_dict['sstart'])
-            gene = re.search("~{3}(\S+)~{3}", output_dict['sseqid']).group(1)
-            row_output = [file,
-                            output_dict['qseqid'],
-                            output_dict['qstart'],
-                            output_dict['qend'],
-                            # '-' if output_dict['sstrand'] == 'minus' else '+',
-                            # output_dict['sstrand'],
-                            gene,
-                            f"{output_dict['sstart']}-{output_dict['send']}"+
-                            f"/{output_dict['slen']}"
-                            ]
-            t.add_row(row_output)
-    except:
-        print("Sequence not found in ", file)
-        sys.exit(1)
+    # try:
+    for i in output:
+        line = i.split()
+        output_dict = dict(zip(BLAST_FIELDS, line))
+        if output_dict['sstrand'] == 'minus':
+            (output_dict['sstart'], output_dict['send']) = (
+                output_dict['send'], output_dict['sstart'])
+        gene = re.search("~{3}(\S+)~{3}", output_dict['sseqid']).group(1)
+        row_cov = (100 * (int(output_dict['length']) - int(output_dict['gaps'])) /
+                    int(output_dict['slen']))
+        print("Hola")
+        if row_cov < mincov :
+            continue
+        row_output = [file,
+                        output_dict['qseqid'],
+                        output_dict['qstart'],
+                        output_dict['qend'],
+                        # '-' if output_dict['sstrand'] == 'minus' else '+',
+                        # output_dict['sstrand'],
+                        gene,
+                        f"{output_dict['sstart']}-{output_dict['send']}" +
+                        f"/{output_dict['slen']}",
+                        # minimap,
+                        f"{output_dict['gapopen']}/{output_dict['gaps']}",
+                        row_cov
+                        ]
+
+        t.add_row(row_output)
+    # except:
+    #     print("Sequence not found in ", file)
+    #     sys.exit(1)
 
     # TODO
     #   my $blastcmd = $dbinfo->{DBTYPE} eq 'nucl'
@@ -201,7 +210,12 @@ print(
     f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
 
 t = PrettyTable(COLUMNS)
-t = PrettyTable(['FILE', 'SEQUENCE', 'START', 'END', 'GENE', 'COVERAGE'])
-process_file(file, t, type, db, threads, minid)
+t = PrettyTable(['FILE', 'SEQUENCE', 'START',
+                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE'])
+
+#     COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
+#    "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
+#    "PRODUCT", "RESISTANCE"]
+process_file(file, t, type, db, threads, minid, mincov)
 
 print(t)
