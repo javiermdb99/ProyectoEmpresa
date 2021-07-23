@@ -116,14 +116,9 @@ def blast_database_info(db, db_name) -> tuple:
     return seq, total_bases, date, type
 
 
-def process_file(file, t: PrettyTable, type, db, threads, minid, mincov):
+def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov):
     process_debug("Reading file.")
     format = "6 " + " ".join(BLAST_FIELDS)
-
-    # try:
-    #     f = open(file, 'r')
-    # except IOError:
-    #     print(file, " does not exist, or is unreadable.")
 
     print("Processing ", file)
     process_debug("Processing file. BLAST+ query")
@@ -152,10 +147,9 @@ def process_file(file, t: PrettyTable, type, db, threads, minid, mincov):
         if output_dict['sstrand'] == 'minus':
             (output_dict['sstart'], output_dict['send']) = (
                 output_dict['send'], output_dict['sstart'])
-        gene = re.search("~{3}(\S+)~{3}", output_dict['sseqid']).group(1)
+        gene, acc = re.search("~{3}(\S+)~{3}(\S+)", output_dict['sseqid']).groups()
         row_cov = (100 * (int(output_dict['length']) - int(output_dict['gaps'])) /
                     int(output_dict['slen']))
-        print("Hola")
         if row_cov < mincov :
             continue
         row_output = [file,
@@ -169,7 +163,10 @@ def process_file(file, t: PrettyTable, type, db, threads, minid, mincov):
                         f"/{output_dict['slen']}",
                         # minimap,
                         f"{output_dict['gapopen']}/{output_dict['gaps']}",
-                        row_cov
+                        "{:.2f}".format(row_cov),
+                        "{:.2f}".format(float(output_dict['pident'])),
+                        db_name,
+                        acc
                         ]
 
         t.add_row(row_output)
@@ -211,11 +208,12 @@ print(
 
 t = PrettyTable(COLUMNS)
 t = PrettyTable(['FILE', 'SEQUENCE', 'START',
-                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE'])
+                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
+                'DATABASE', 'ACCESSION'])
 
 #     COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
 #    "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
 #    "PRODUCT", "RESISTANCE"]
-process_file(file, t, type, db, threads, minid, mincov)
+process_file(file, t, type, db, db_name, threads, minid, mincov)
 
 print(t)
