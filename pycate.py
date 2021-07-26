@@ -38,8 +38,6 @@ def parse_arguments():
                         help="Verbose debug output.")
     # parser.add_argument('-q', '--quiet', action='store_true',
     #                     help="No error output.")
-    # parser.add_argument('-v', '--version',
-    #                     action='store_true', help="Print version.")
     # parser.add_argument('--check', action='store_true', help="Check dependencies are installed.")
     parser.add_argument('--threads', action='store',
                         help="Use this many BLAST+ threads.",
@@ -54,8 +52,8 @@ def parse_arguments():
                         help="Database to be used.", default="resfinder")
     # parser.add_argument('--noheader', action='store_true',
     #                     help="Suppress column headers.")
-    # parser.add_argument('--csv', action='store_true',
-    #                     help="Output csv instead of tsv.")
+    parser.add_argument('--csv', action='store_true',
+                        help="Output csv instead of table.")
     # parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
     parser.add_argument('--minid', action='store', type=int, default=80,
                         help="Minimum DNA identity.")
@@ -116,11 +114,13 @@ def blast_database_info(db, db_name) -> tuple:
     return seq, total_bases, date, type
 
 
-def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov):
+def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov, csv):
     process_debug("Reading file.")
     format = "6 " + " ".join(BLAST_FIELDS)
 
-    print("Processing ", file)
+    if not csv:
+        print("Processing ", file)
+
     process_debug("Processing file. BLAST+ query")
     if type == 'nucl':
         blast_query = "blastn -task blastn -dust no -perc_identity " + \
@@ -139,7 +139,8 @@ def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov
     output = output.split("\n")
     output.pop()
 
-    print("Found ", len(output), " genes in ", file)
+    if not csv:
+        print("Found ", len(output), " genes in ", file)
     # try:
     for i in output:
         line = i.split()
@@ -168,8 +169,13 @@ def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov
                         db_name,
                         acc
                         ]
+        if not csv:
+            t.add_row(row_output)
+        else:
+            print(";".join(row_output))
 
-        t.add_row(row_output)
+    return t
+
     # except:
     #     print("Sequence not found in ", file)
     #     sys.exit(1)
@@ -193,6 +199,7 @@ minid = args['minid']
 mincov = args['mincov']
 wd = os.path.abspath(args['datadir'])
 threads = args['threads']
+csv = args['csv']
 
 db_name = db
 db = f"{wd}/{db}/sequences"
@@ -202,9 +209,11 @@ process_debug("Using " + db + " database.")
 
 
 sequences, total_bases, date_db, type = blast_database_info(db, db_name)
-print(f"\nDatabase \"{db_name}\" information:")
-print(
-    f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
+
+if not csv:
+    print(f"\nDatabase \"{db_name}\" information:")
+    print(
+        f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
 
 t = PrettyTable(COLUMNS)
 t = PrettyTable(['FILE', 'SEQUENCE', 'START',
@@ -214,6 +223,12 @@ t = PrettyTable(['FILE', 'SEQUENCE', 'START',
 #     COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
 #    "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
 #    "PRODUCT", "RESISTANCE"]
-process_file(file, t, type, db, db_name, threads, minid, mincov)
+if csv:
+    print(";".join(['FILE', 'SEQUENCE', 'START',
+                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
+                'DATABASE', 'ACCESSION']))
 
-print(t)
+t = process_file(file, t, type, db, db_name, threads, minid, mincov, csv)
+
+if not csv:
+    print(t)
