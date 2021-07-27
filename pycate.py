@@ -13,9 +13,14 @@ Tecnológico Agrario de Castilla y León (Valladolid, Castile and Leon).
 AUTHOR = "Javier Martín"
 URL = "https://github.com/javiermdb99"
 
-COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
-           "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
-           "PRODUCT", "RESISTANCE"]
+# COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
+#            "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
+#            "PRODUCT", "RESISTANCE"]
+
+COLUMNS = ['FILE', 'SEQUENCE', 'START',
+                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
+                'DATABASE', 'ACCESSION']
+
 BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "sseqid", "sstart", "send",
                 "slen", "sstrand", "evalue", "length", "pident", "gaps", "gapopen",
                 "stitle"]
@@ -42,6 +47,8 @@ def parse_arguments():
     parser.add_argument('--threads', action='store',
                         help="Use this many BLAST+ threads.",
                         default=1, type=int)
+    parser.add_argument('--fofn', action='store_true',
+                        help="Use file of file names.")
     # parser.add_argument('--setupdb', action='store',
     #                     help="Formal all the BLAST databases.")
     # parser.add_argument('-l', '--list', action='store_true',
@@ -65,6 +72,10 @@ def parse_arguments():
 
 
 def check_arguments(args):
+    """
+    Checks all arguments are between allowed limits.
+    """
+
     minid = args['minid']
     mincov = args['mincov']
     threads = args['threads']
@@ -83,6 +94,7 @@ def blast_database_info(db, db_name) -> tuple:
 
     Arguments:
         -db: database used.
+        -db_name: name of database
 
     Returns:
         -seq: number of sequences found in database.
@@ -98,12 +110,14 @@ def blast_database_info(db, db_name) -> tuple:
     info = ' '.join(re.split("[ \n\t]", out.stdout.decode('utf-8')))
 
     try:
+        # Sequences found in database
         seq = re.search("([\d,]*) sequences", info).group(1)
 
         total_bases = re.search("([\d,]*) total bases", info).group(1)
 
         date = re.search("Date: (\w*\s+\d+,\s+\d+)", info).group(1)
 
+        # nucleotides or proteines
         type = re.search("total\s+(\S+)", info).group(1)
         type = "prot" if type == "residues" else "nucl"
 
@@ -114,13 +128,30 @@ def blast_database_info(db, db_name) -> tuple:
     return seq, total_bases, date, type
 
 
-def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov, csv):
-    process_debug("Reading file.")
+
+def process_file(file, type, db, db_name, threads, minid, mincov, csv):
+    """
+    This function calls BLAST to process the file. Before doing this, it converts
+    it into an allowed fasta file. Depending on which format it is being used, it
+    will prompt it out as a table or a csv file.
+
+    Arguments:
+        -file: name of file
+        -type: type of database being used (nucleotides or proteines)
+        -db: route of database
+        -db_name: name of database
+        -threads: number of threads os BLAST query.
+        -minid: minimum DNA identity.
+        -mincov: minimum DNA coverage %.
+        -csv: in case it is wanted to store the output in csv format.
+    """
+    process_debug(f"Reading file {file}.")
     format = "6 " + " ".join(BLAST_FIELDS)
 
     if not csv:
         print("Processing ", file)
 
+    # BLAST command
     process_debug("Processing file. BLAST+ query")
     if type == 'nucl':
         blast_query = "blastn -task blastn -dust no -perc_identity " + \
@@ -172,9 +203,7 @@ def process_file(file, t: PrettyTable, type, db, db_name, threads, minid, mincov
         if not csv:
             t.add_row(row_output)
         else:
-            print(";".join(row_output))
-
-    return t
+            print(",".join(row_output))
 
     # except:
     #     print("Sequence not found in ", file)
@@ -200,6 +229,7 @@ mincov = args['mincov']
 wd = os.path.abspath(args['datadir'])
 threads = args['threads']
 csv = args['csv']
+fofn = args['fofn']
 
 db_name = db
 db = f"{wd}/{db}/sequences"
@@ -216,19 +246,18 @@ if not csv:
         f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
 
 t = PrettyTable(COLUMNS)
-t = PrettyTable(['FILE', 'SEQUENCE', 'START',
-                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
-                'DATABASE', 'ACCESSION'])
 
-#     COLUMNS = ["FILE", "SEQUENCE", "START", "END", "STRAND", "GENE", "COVERAGE",
-#    "COVERAGE_MAP", "GAPS", "%COVERAGE", "%IDENTITY", "DATABASE", "ACCESSION",
-#    "PRODUCT", "RESISTANCE"]
 if csv:
-    print(";".join(['FILE', 'SEQUENCE', 'START',
-                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
-                'DATABASE', 'ACCESSION']))
+    print(",".join(COLUMNS))
 
-t = process_file(file, t, type, db, db_name, threads, minid, mincov, csv)
+# in case fofn flag is used, file is where file names are stored
+if fofn:
+    fofn_reader = open(file, 'r')
+    files = fofn_reader.readlines()
+    for file in files:
+        process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv)
+else:
+    process_file(file, type, db, db_name, threads, minid, mincov, csv)
 
 if not csv:
     print(t)
