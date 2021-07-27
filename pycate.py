@@ -57,8 +57,8 @@ def parse_arguments():
                         help="Directory where data is stored.")
     parser.add_argument('--db', action='store',
                         help="Database to be used.", default="resfinder")
-    # parser.add_argument('--noheader', action='store_true',
-    #                     help="Suppress column headers.")
+    parser.add_argument('--noheader', action='store_true',
+                        help="Suppress column headers (this activates csv).")
     parser.add_argument('--csv', action='store_true',
                         help="Output csv instead of table.")
     # parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
@@ -228,8 +228,9 @@ minid = args['minid']
 mincov = args['mincov']
 wd = os.path.abspath(args['datadir'])
 threads = args['threads']
-csv = args['csv']
 fofn = args['fofn']
+no_header = args['noheader']
+csv = True if no_header else args['csv']
 
 db_name = db
 db = f"{wd}/{db}/sequences"
@@ -247,7 +248,7 @@ if not csv:
 
 t = PrettyTable(COLUMNS)
 
-if csv:
+if csv and not no_header:
     print(",".join(COLUMNS))
 
 # in case fofn flag is used, file is where file names are stored
