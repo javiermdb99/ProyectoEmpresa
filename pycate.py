@@ -38,7 +38,7 @@ def parse_arguments():
     Provides different options to change the program's behaviour.
     """
 
-    parser.add_argument('file', action='store', help=".fasta File.")
+    parser.add_argument('file', action='store', nargs="?", help=".fasta File.") #NOTE: OBSERVAR COMPORTAMIENTO DE NARGS
     parser.add_argument('-d', '--debug', action='store_true',
                         help="Verbose debug output.")
     # parser.add_argument('-q', '--quiet', action='store_true',
@@ -49,10 +49,10 @@ def parse_arguments():
                         default=1, type=int)
     parser.add_argument('--fofn', action='store_true',
                         help="Use file of file names.")
-    # parser.add_argument('--setupdb', action='store',
-    #                     help="Formal all the BLAST databases.")
-    # parser.add_argument('-l', '--list', action='store_true',
-    #                     help="List included databases.")
+    parser.add_argument('--setupdb', action='store_true',
+                        help="Formal all the BLAST databases.")
+    parser.add_argument('-l', '--list', action='store_true',
+                        help="List included databases.")
     parser.add_argument('--datadir', action="store", default=os.getcwd() + "/db",
                         help="Directory where data is stored.")
     parser.add_argument('--db', action='store',
@@ -76,9 +76,12 @@ def check_arguments(args):
     Checks all arguments are between allowed limits.
     """
 
+    file = args['file']
     minid = args['minid']
     mincov = args['mincov']
     threads = args['threads']
+    if file == None:
+        raise ValueError('Please, specify a file name.')
     if not (minid <= 100 and minid > 0):
         raise ValueError('minid must be between 0 and 100 (100 included).')
     if not (mincov <= 100 and mincov >= 0):
@@ -217,48 +220,65 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv):
     # any2fasta -q -u MS7593.fasta | blastx -task blastx-fast -seg no -db db/resfinder/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000
     # (any2fasta -q -u MS7593.fasta | blastn -task blastn -dust no -perc_identity 80  -db db/ncbi/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000 -outfmt '6 qseqid qstart qend qlen sseqid sstart send slen sstrand evalue length pident gaps gapopen stitle')
 
+def list_databases(wd, t):
+    subdirectories = [x[0] for x in os.walk(wd)]
+    for subdirectory in subdirectories:
+        name = re.search("/(\w+$)", subdirectory).group(1)
+        db_name = f"{subdirectory}/sequences"
+        try:
+            open(db_name, 'r')
+        except:
+            continue
+        seq, total_bases, date, type = blast_database_info(db_name, name)
+        t.add_row([name, seq, date, type])
+        
 
 parser = argparse.ArgumentParser(description="A program")
 args = parse_arguments()
-check_arguments(args)
-file = args['file']
-db = args['db']
-debug = args['debug']
-minid = args['minid']
-mincov = args['mincov']
 wd = os.path.abspath(args['datadir'])
-threads = args['threads']
-fofn = args['fofn']
-no_header = args['noheader']
-csv = True if no_header else args['csv']
-
-db_name = db
-db = f"{wd}/{db}/sequences"
-
-process_debug("Using " + wd + " working directory.")
-process_debug("Using " + db + " database.")
-
-
-sequences, total_bases, date_db, type = blast_database_info(db, db_name)
-
-if not csv:
-    print(f"\nDatabase \"{db_name}\" information:")
-    print(
-        f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
-
-t = PrettyTable(COLUMNS)
-
-if csv and not no_header:
-    print(",".join(COLUMNS))
-
-# in case fofn flag is used, file is where file names are stored
-if fofn:
-    fofn_reader = open(file, 'r')
-    files = fofn_reader.readlines()
-    for file in files:
-        process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv)
-else:
-    process_file(file, type, db, db_name, threads, minid, mincov, csv)
-
-if not csv:
+debug = args['debug']
+if args['list'] or args['setupdb']:
+    t = PrettyTable(["DATABASE", "SEQUENCE", "DATE", "TYPE"])
+    list_databases(wd, t)
     print(t)
+else:
+    check_arguments(args)
+    file = args['file']
+    db = args['db']
+    minid = args['minid']
+    mincov = args['mincov']
+    threads = args['threads']
+    fofn = args['fofn']
+    no_header = args['noheader']
+    csv = True if no_header else args['csv']
+
+    db_name = db
+    db = f"{wd}/{db}/sequences"
+
+    process_debug("Using " + wd + " working directory.")
+    process_debug("Using " + db + " database.")
+
+
+    sequences, total_bases, date_db, type = blast_database_info(db, db_name)
+
+    if not csv:
+        print(f"\nDatabase \"{db_name}\" information:")
+        print(
+            f"Number of sequences: {sequences}\t Number of bases: {total_bases}\t Date: {date_db}")
+
+    t = PrettyTable(COLUMNS)
+
+    if csv and not no_header:
+        print(",".join(COLUMNS))
+
+    # in case fofn flag is used, file is where file names are stored
+    if fofn:
+        fofn_reader = open(file, 'r')
+        files = fofn_reader.readlines()
+        for file in files:
+            process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv)
+    else:
+        process_file(file, type, db, db_name, threads, minid, mincov, csv)
+
+    if not csv:
+        print(t)
