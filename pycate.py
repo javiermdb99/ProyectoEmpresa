@@ -64,7 +64,7 @@ def parse_arguments():
                         help="Suppress column headers (this activates csv).")
     parser.add_argument('--csv', action='store_true',
                         help="Output csv instead of table.")
-    # parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
+    parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
     parser.add_argument('--minid', action='store', type=int, default=80,
                         help="Minimum DNA identity.")
     parser.add_argument('--mincov', action='store', type=int, default=0,
@@ -138,7 +138,7 @@ def blast_database_info(db, db_name) -> tuple:
 
 
 
-def process_file(file, type, db, db_name, threads, minid, mincov, csv):
+def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
     """
     This function calls BLAST to process the file. Before doing this, it converts
     it into an allowed fasta file. Depending on which format it is being used, it
@@ -155,6 +155,7 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv):
         -csv: in case it is wanted to store the output in csv format.
     """
     
+    file_name = os.path.basename(file) if no_path else file
     process_debug(f"Reading file {file}.")
     format = "6 " + " ".join(BLAST_FIELDS)
 
@@ -194,7 +195,7 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv):
                     int(output_dict['slen']))
         if row_cov < mincov :
             continue
-        row_output = [file,
+        row_output = [file_name,
                         output_dict['qseqid'],
                         output_dict['qstart'],
                         output_dict['qend'],
@@ -268,6 +269,7 @@ else:
     fofn = args['fofn']
     no_header = args['noheader']
     csv = True if no_header else args['csv']
+    no_path = args['nopath']
 
     db_name = db
     db = f"{wd}/{db}/sequences"
@@ -293,9 +295,9 @@ else:
         fofn_reader = open(file, 'r')
         files = fofn_reader.readlines()
         for file in files:
-            process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv)
+            process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv, no_path)
     else:
-        process_file(file, type, db, db_name, threads, minid, mincov, csv)
+        process_file(file, type, db, db_name, threads, minid, mincov, csv,no_path)
 
     if not csv:
         print(t)
