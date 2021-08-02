@@ -29,6 +29,9 @@ REQUIRE = ["blastn", "blastx", "makeblastdb",
 
 
 def process_debug(message):
+    """
+    Prints debug messages if needed.
+    """
     if debug:
         print(message)
 
@@ -74,6 +77,9 @@ def parse_arguments():
 def check_arguments(args):
     """
     Checks all arguments are between allowed limits.
+
+    Arguments:
+        args: list of ParseArgument arguments
     """
 
     file = args['file']
@@ -148,6 +154,7 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv):
         -mincov: minimum DNA coverage %.
         -csv: in case it is wanted to store the output in csv format.
     """
+    
     process_debug(f"Reading file {file}.")
     format = "6 " + " ".join(BLAST_FIELDS)
 
@@ -221,6 +228,14 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv):
     # (any2fasta -q -u MS7593.fasta | blastn -task blastn -dust no -perc_identity 80  -db db/ncbi/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000 -outfmt '6 qseqid qstart qend qlen sseqid sstart send slen sstrand evalue length pident gaps gapopen stitle')
 
 def list_databases(wd, t):
+    """
+    This function searchs indexed databases in the given working directory.
+
+    Arguments:
+        - wd: working directory
+        - t: PrettyTable which rows will be indexed databases information.
+    """
+
     subdirectories = [x[0] for x in os.walk(wd)]
     for subdirectory in subdirectories:
         name = re.search("/(\w+$)", subdirectory).group(1)
@@ -231,15 +246,17 @@ def list_databases(wd, t):
             continue
         seq, total_bases, date, type = blast_database_info(db_name, name)
         t.add_row([name, seq, date, type])
+    return t
         
 
 parser = argparse.ArgumentParser(description="A program")
 args = parse_arguments()
 wd = os.path.abspath(args['datadir'])
 debug = args['debug']
+
 if args['list'] or args['setupdb']:
     t = PrettyTable(["DATABASE", "SEQUENCE", "DATE", "TYPE"])
-    list_databases(wd, t)
+    t = list_databases(wd, t)
     print(t)
 else:
     check_arguments(args)
