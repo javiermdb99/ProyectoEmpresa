@@ -18,7 +18,7 @@ URL = "https://github.com/javiermdb99"
 #            "PRODUCT", "RESISTANCE"]
 
 COLUMNS = ['FILE', 'SEQUENCE', 'START',
-                'END', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
+                'END', 'STRAND', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
                 'DATABASE', 'ACCESSION']
 
 BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "sseqid", "sstart", "send",
@@ -199,7 +199,7 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
                         output_dict['qseqid'],
                         output_dict['qstart'],
                         output_dict['qend'],
-                        # '-' if output_dict['sstrand'] == 'minus' else '+',
+                        '-' if output_dict['sstrand'] == 'minus' else '+',
                         # output_dict['sstrand'],
                         gene,
                         f"{output_dict['sstart']}-{output_dict['send']}" +
@@ -228,36 +228,48 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
     # any2fasta -q -u MS7593.fasta | blastx -task blastx-fast -seg no -db db/resfinder/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000
     # (any2fasta -q -u MS7593.fasta | blastn -task blastn -dust no -perc_identity 80  -db db/ncbi/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000 -outfmt '6 qseqid qstart qend qlen sseqid sstart send slen sstrand evalue length pident gaps gapopen stitle')
 
-def list_databases(wd, t):
+def list_databases(wd, t, setupdb):
     """
     This function searchs indexed databases in the given working directory.
 
     Arguments:
         - wd: working directory
         - t: PrettyTable which rows will be indexed databases information.
+        - setupdb: if user wants to create a new database
     """
 
     subdirectories = [x[0] for x in os.walk(wd)]
+    print(subdirectories)
     for subdirectory in subdirectories:
         name = re.search("/(\w+$)", subdirectory).group(1)
         db_name = f"{subdirectory}/sequences"
         try:
             open(db_name, 'r')
+            #TODO: creación de la base de datos
+            if setupdb:
+                setup_database(db_name, name)
+
+            #TODO: indexación de la base de datos con .nin
         except:
             continue
         seq, total_bases, date, type = blast_database_info(db_name, name)
         t.add_row([name, seq, date, type])
     return t
         
+def setup_database(path, name):
+    print(path)
+    print(name)
 
 parser = argparse.ArgumentParser(description="A program")
 args = parse_arguments()
 wd = os.path.abspath(args['datadir'])
 debug = args['debug']
+list = args['list']
+setupdb = args['setupdb']
 
-if args['list'] or args['setupdb']:
+if list or setupdb:
     t = PrettyTable(["DATABASE", "SEQUENCE", "DATE", "TYPE"])
-    t = list_databases(wd, t)
+    t = list_databases(wd, t, setupdb)
     print(t)
 else:
     check_arguments(args)
@@ -292,10 +304,13 @@ else:
 
     # in case fofn flag is used, file is where file names are stored
     if fofn:
-        fofn_reader = open(file, 'r')
-        files = fofn_reader.readlines()
-        for file in files:
-            process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv, no_path)
+        try:
+            fofn_reader = open(file, 'r')
+            files = fofn_reader.readlines()
+            for file in files:
+                process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv, no_path)
+        except IOError:
+            print("Can't open fofn ", file)
     else:
         process_file(file, type, db, db_name, threads, minid, mincov, csv,no_path)
 
