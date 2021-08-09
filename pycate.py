@@ -200,7 +200,6 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
                         output_dict['qstart'],
                         output_dict['qend'],
                         '-' if output_dict['sstrand'] == 'minus' else '+',
-                        # output_dict['sstrand'],
                         gene,
                         f"{output_dict['sstart']}-{output_dict['send']}" +
                         f"/{output_dict['slen']}",
