@@ -18,8 +18,8 @@ URL = "https://github.com/javiermdb99"
 #            "PRODUCT", "RESISTANCE"]
 
 COLUMNS = ['FILE', 'SEQUENCE', 'START',
-                'END', 'STRAND', 'GENE', 'COVERAGE', 'GAPS', '%COVERAGE', '%IDENTITY',
-                'DATABASE', 'ACCESSION']
+           'END', 'STRAND', 'GENE', 'COVERAGE', 'COVERAGE_MAP', 'GAPS', '%COVERAGE', 
+           '%IDENTITY', 'DATABASE', 'ACCESSION']
 
 BLAST_FIELDS = ["qseqid", "qstart", "qend", "qlen", "sseqid", "sstart", "send",
                 "slen", "sstrand", "evalue", "length", "pident", "gaps", "gapopen",
@@ -41,7 +41,8 @@ def parse_arguments():
     Provides different options to change the program's behaviour.
     """
 
-    parser.add_argument('file', action='store', nargs="?", help=".fasta File.") #NOTE: OBSERVAR COMPORTAMIENTO DE NARGS
+    # NOTE: OBSERVAR COMPORTAMIENTO DE NARGS
+    parser.add_argument('file', action='store', nargs="?", help=".fasta File.")
     parser.add_argument('-d', '--debug', action='store_true',
                         help="Verbose debug output.")
     # parser.add_argument('-q', '--quiet', action='store_true',
@@ -64,7 +65,8 @@ def parse_arguments():
                         help="Suppress column headers (this activates csv).")
     parser.add_argument('--csv', action='store_true',
                         help="Output csv instead of table.")
-    parser.add_argument('--nopath', action='store_true', help="Strip filename paths from FILE column.")
+    parser.add_argument('--nopath', action='store_true',
+                        help="Strip filename paths from FILE column.")
     parser.add_argument('--minid', action='store', type=int, default=80,
                         help="Minimum DNA identity.")
     parser.add_argument('--mincov', action='store', type=int, default=0,
@@ -136,7 +138,22 @@ def blast_database_info(db, db_name) -> tuple:
 
     return seq, total_bases, date, type
 
-
+def gen_map(start, end, length, gaps=0):
+    width = 15 - (1 if gaps else 0)
+    scale = length // width
+    on = '='
+    off = '.'
+    start = start // scale
+    end = end // scale
+    length = length // scale
+    # print((gaps, width, start, end, width // 2, int(width/2)))
+    gen_map = ''
+    for i in range(1, width+1):
+        current_gen = on if (i >= start and i <= end) else off
+        gen_map = gen_map + current_gen
+        if (gaps and i == (width // 2)):
+            gen_map = gen_map + '/'
+    return gen_map
 
 def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
     """
@@ -154,7 +171,7 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
         -mincov: minimum DNA coverage %.
         -csv: in case it is wanted to store the output in csv format.
     """
-    
+
     file_name = os.path.basename(file) if no_path else file
     process_debug(f"Reading file {file}.")
     format = "6 " + " ".join(BLAST_FIELDS)
@@ -190,26 +207,29 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
         if output_dict['sstrand'] == 'minus':
             (output_dict['sstart'], output_dict['send']) = (
                 output_dict['send'], output_dict['sstart'])
-        gene, acc = re.search("~{3}(\S+)~{3}(\S+)", output_dict['sseqid']).groups()
+        gene, acc = re.search("~{3}(\S+)~{3}(\S+)",
+                              output_dict['sseqid']).groups()
         row_cov = (100 * (int(output_dict['length']) - int(output_dict['gaps'])) /
-                    int(output_dict['slen']))
-        if row_cov < mincov :
+                   int(output_dict['slen']))
+        if row_cov < mincov:
             continue
+        map = gen_map(int(output_dict["sstart"]), int(output_dict['send']),
+                        int(output_dict["slen"]), int(output_dict["gapopen"]))
         row_output = [file_name,
-                        output_dict['qseqid'],
-                        output_dict['qstart'],
-                        output_dict['qend'],
-                        '-' if output_dict['sstrand'] == 'minus' else '+',
-                        gene,
-                        f"{output_dict['sstart']}-{output_dict['send']}" +
-                        f"/{output_dict['slen']}",
-                        # minimap,
-                        f"{output_dict['gapopen']}/{output_dict['gaps']}",
-                        "{:.2f}".format(row_cov),
-                        "{:.2f}".format(float(output_dict['pident'])),
-                        db_name,
-                        acc
-                        ]
+                      output_dict['qseqid'],
+                      output_dict['qstart'],
+                      output_dict['qend'],
+                      '-' if output_dict['sstrand'] == 'minus' else '+',
+                      gene,
+                      f"{output_dict['sstart']}-{output_dict['send']}" +
+                      f"/{output_dict['slen']}",
+                      map,
+                      f"{output_dict['gapopen']}/{output_dict['gaps']}",
+                      "{:.2f}".format(row_cov),
+                      "{:.2f}".format(float(output_dict['pident'])),
+                      db_name,
+                      acc
+                      ]
         if not csv:
             t.add_row(row_output)
         else:
@@ -226,6 +246,7 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
     #            ;
     # any2fasta -q -u MS7593.fasta | blastx -task blastx-fast -seg no -db db/resfinder/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000
     # (any2fasta -q -u MS7593.fasta | blastn -task blastn -dust no -perc_identity 80  -db db/ncbi/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000 -outfmt '6 qseqid qstart qend qlen sseqid sstart send slen sstrand evalue length pident gaps gapopen stitle')
+
 
 def list_databases(wd, t, setupdb):
     """
@@ -244,20 +265,22 @@ def list_databases(wd, t, setupdb):
         db_name = f"{subdirectory}/sequences"
         try:
             open(db_name, 'r')
-            #TODO: creación de la base de datos
+            # TODO: creación de la base de datos
             if setupdb:
                 setup_database(db_name, name)
 
-            #TODO: indexación de la base de datos con .nin
+            # TODO: indexación de la base de datos con .nin
         except:
             continue
         seq, total_bases, date, type = blast_database_info(db_name, name)
         t.add_row([name, seq, date, type])
     return t
-        
+
+
 def setup_database(path, name):
     print(path)
     print(name)
+
 
 parser = argparse.ArgumentParser(description="A program")
 args = parse_arguments()
@@ -288,7 +311,6 @@ else:
     process_debug("Using " + wd + " working directory.")
     process_debug("Using " + db + " database.")
 
-
     sequences, total_bases, date_db, type = blast_database_info(db, db_name)
 
     if not csv:
@@ -307,11 +329,13 @@ else:
             fofn_reader = open(file, 'r')
             files = fofn_reader.readlines()
             for file in files:
-                process_file(file.strip(), type, db, db_name, threads, minid, mincov, csv, no_path)
+                process_file(file.strip(), type, db, db_name,
+                             threads, minid, mincov, csv, no_path)
         except IOError:
             print("Can't open fofn ", file)
     else:
-        process_file(file, type, db, db_name, threads, minid, mincov, csv,no_path)
+        process_file(file, type, db, db_name, threads,
+                     minid, mincov, csv, no_path)
 
     if not csv:
         print(t)

@@ -221,7 +221,7 @@ sub motd {
 
 
 #----------------------------------------------------------------------
-
+# ||= operator is for default values
 sub minimap {
   my($x, $y, $L, $broken, $scale, $on, $off) = @_;
   my $WIDTH = 15 - ($broken ? 1 : 0);
