@@ -139,6 +139,20 @@ def blast_database_info(db, db_name) -> tuple:
     return seq, total_bases, date, type
 
 def gen_map(start, end, length, gaps=0):
+    """
+    Creates a simple representation of gene coverage.
+
+    Arguments:
+        -start: base number in which coverage starts.
+        -end: base number in which coverage ends.
+        -length: length of the gene.
+        -gaps = if gene coverage is broken, this is greater than 0.
+        Default value is 0.
+    
+    Returns:
+        -gen_map
+    """
+
     width = 15 - (1 if gaps else 0)
     scale = length // width
     on = '='
