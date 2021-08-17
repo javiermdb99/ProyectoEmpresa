@@ -261,6 +261,22 @@ def process_file(file, type, db, db_name, threads, minid, mincov, csv, no_path):
     # any2fasta -q -u MS7593.fasta | blastx -task blastx-fast -seg no -db db/resfinder/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000
     # (any2fasta -q -u MS7593.fasta | blastn -task blastn -dust no -perc_identity 80  -db db/ncbi/sequences -num_threads 1 -evalue 1E-20 -culling_limit 1 -max_target_seqs 10000 -outfmt '6 qseqid qstart qend qlen sseqid sstart send slen sstrand evalue length pident gaps gapopen stitle')
 
+def setup_database(path, name):
+    # print(path)
+    # print(name)
+    try:
+        open(path, 'r')
+        execution = f"egrep '^>' {path}"
+        cmd = subprocess.run(execution,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         shell=True)
+        output = cmd.stdout.decode('utf-8')
+        output = output.split('\n')
+        output.pop()
+        output = ''.join(output)
+        print(output)
+    except:
+        print("Could not open ", name)
 
 def list_databases(wd, t, setupdb):
     """
@@ -291,17 +307,16 @@ def list_databases(wd, t, setupdb):
     return t
 
 
-def setup_database(path, name):
-    print(path)
-    print(name)
-
-
 parser = argparse.ArgumentParser(description="A program")
 args = parse_arguments()
 wd = os.path.abspath(args['datadir'])
 debug = args['debug']
 list = args['list']
 setupdb = args['setupdb']
+
+# if setupdb:
+#     setup_database("db/resfinder/sequences", "resfinder")
+#     exit(0)
 
 if list or setupdb:
     t = PrettyTable(["DATABASE", "SEQUENCE", "DATE", "TYPE"])
